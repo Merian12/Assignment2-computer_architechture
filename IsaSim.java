@@ -33,17 +33,27 @@ public class IsaSim {
             int instr = progr[pc >> 2];
             int opcode = instr & 0x7f;//extracts the opcode //
             int rd = (instr >> 7) & 0x01f;//destination register//
+            int funct3 = (instr >> 12) & 0x7f;//sub opcode
             int rs1 = (instr >> 15) & 0x01f;//source register//
             int rs2 = (instr >> 20) & 0x1f;//other source register//
             int imm = (instr >> 20); //the imm5//
+            int funct7 = (instr >> 25) & 0x7f;// sub opcode
 
             switch (opcode) {
 
                 case 0x13://0x13 is addi//
                     reg[rd] = reg[rs1] + imm;
                     break;
-                case 0x33:
-                    reg[rd]= reg[rs1] + reg[rs2];
+                case 0x33: //arithmetic operations
+                    switch (funct3) {
+                        case 0:
+                            if (funct7 == 0x20) { //sub
+                                reg[rd] = reg[rs1] - reg[rs2];
+                            } else {              //add
+                                reg[rd] = reg[rs1] + reg[rs2];
+                            }
+                            break;
+                    }
                     break;
                 default:
                     System.out.println("Opcode " + opcode + " not yet implemented");
