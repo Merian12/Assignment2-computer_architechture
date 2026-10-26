@@ -55,6 +55,22 @@ public class IsaSim {
                             break;
                     }
                     break;
+                case 0x03 //load operations
+                     int load_address = imm + rs1;
+                    switch (funct3) {
+                    case 0:
+                        reg[rd] = memory[load_address]; //lb
+                            break;
+                    case 1:
+                        
+                    case 2: 
+                    case 3:
+                    case 4:
+                    case 5:
+                        reg[rd] = memory[load_address] & 0xff; //lbu
+                        break;
+                    }
+                    break;            
                 default:
                     System.out.println("Opcode " + opcode + " not yet implemented");
                     break;
