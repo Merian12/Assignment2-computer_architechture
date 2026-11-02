@@ -10,6 +10,7 @@ public class IsaSim {
 
 	static int pc;
 	static int reg[] = new int[32];
+	byte[] memory = new byte[1 << 20]; // 1 MB of memory
 
 	// Here the first program hard coded as an array
 	static int progr[] = {
@@ -53,25 +54,54 @@ public class IsaSim {
 			int rs2 = (instr >> 20) & 0x1f;//other source register//
 			int imm = (instr >> 20); //the imm5//
 			int funct7 = (instr >> 25) & 0x7f;// sub opcode
+			int immS = ((instr >> 25) << 5) | ((instr >> 7) & 0x1f); // used for store functions
 
 			switch (opcode) {
 
                 case 0x03 //load operations
                      int load_address = imm + rs1;
                     switch (funct3) {
-                    case 0:
-                        reg[rd] = memory[load_address]; //lb
+                    case 0: //lb
+                        reg[rd] = memory[load_address]; 
                             break;
-                    case 1:
-
-                    case 2:
-                    case 3:
-                    case 4:
-                    case 5:
-                        reg[rd] = memory[load_address] & 0xff; //lbu
+                    case 1: //lh
+						reg[rd] = (memory[load_address] & 0xff) | (memory[load_address + 1] << 8);
+							break;
+                    case 2: //lw
+							reg[rd] = (memory[load_address] & 0xff) | ((memory[load_address + 1] & 0xff)
+																	| ((memory[load_address + 2] & 0xff)
+																	| ((memory[load_address + 3] << 24);
+							break;
+                    case 3: //doesn't exist
+							throw new IllegalStateException("not valid load function");
+                    case 4: //lbu
+							reg[rd] = memory[load_address] & 0xff;
+							break;
+                    case 5: //lhu
+                        reg[rd] = (memory[load_address] & 0xff) | ((memory[load_address + 1] & 0xff)
                         break;
                     }
                     break;
+				case 0x23: { //store functions
+					int store_address = reg[rs1] + immS;
+					switch (funct3) {
+						case 0: //sb
+							memory[store_address] = (byte) reg[rs2];
+							break;
+						case 1: //sh
+							memory[store_address] = (byte) (reg[rs2]);
+							memory[stor_address + 1] = (byte) (reg[rs2] >>8);
+							break;
+						case 2: //sw
+							memory[store_address] = (byte) reg[rs2];
+							memory[store_address + 1] = (byte) (reg[rs2] >> 8);
+							memory[store_address + 2] = (byte) (reg[rs2] >> 16);
+							memory[store_address + 3] = (byte) (reg[rs2] >> 24);
+							break;
+					}
+					break;
+				}
+					
 				case 0x13://0x13 is addi//
 					switch (funct3) {
 						case 0:
