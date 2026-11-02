@@ -31,7 +31,7 @@ public class IsaSim {
             0xff000193, // addi x3 x0 -16
             0x4021d193, // srai x3 x3 2
             0x123451b7, // lui x3 0x12345
-            0x00001197, // auipc x3 1
+            0x00001197, // auipc x3 1 
     };
 
     public static void main(String[] args) {
@@ -54,10 +54,13 @@ public class IsaSim {
             int imm = (instr >> 20); //the imm5//
             int funct7 = (instr >> 25) & 0x7f;// sub opcode
             int immS = ((instr >> 25) << 5) | ((instr >> 7) & 0x1f); // used for store functions
+            int immJ = ((instr >> 31) << 20) | (((instr >> 12) & 0xff) << 12) | (((instr >> 20) & 0x1) << 11)
+                    | (((instr >> 21) & 0x3ff) << 1); // used for jump function
 
             switch (opcode) {
 
                 case 0x13: // immediate operations
+
                     if (funct3 == 0x0) {
                         // ADDI
                         reg[rd] = reg[rs1] + imm;
@@ -142,6 +145,7 @@ public class IsaSim {
                     break;
 
                 case 0x03: { //load operations
+
                     int load_address = imm + rs1;
 
                     switch (funct3) {
@@ -177,9 +181,11 @@ public class IsaSim {
                 }
 
                 case 0x23: { //store functions
+
                     int store_address = reg[rs1] + immS;
 
                     switch (funct3) {
+
                         case 0: //sb
                             memory[store_address] = (byte) reg[rs2];
                             break;
@@ -207,12 +213,24 @@ public class IsaSim {
                     reg[rd] = pc + (instr & 0xfffff000);
                     break;
 
+                case 0x6f: // jal
+                    reg[rd] = pc + 4;
+                    pc += immJ - 4; 
+                    break;
+
+                case 0x67: // jalr
+                    reg[rd] = pc + 4;
+                    pc = ((reg[rs1] + imm) & ~1) - 4; 
+                    break;
+                    
                 default:
                     System.out.println("Opcode " + opcode + " not yet implemented");
                     break;
             }
 
             pc += 4; // One instruction is four bytes
+
+            System.out.print("PC " + pc + " ");
 
             for (int i = 0; i < reg.length; ++i) {
                 System.out.print(reg[i] + " ");
