@@ -54,6 +54,11 @@ public class IsaSim {
             int imm = (instr >> 20); //the imm5//
             int funct7 = (instr >> 25) & 0x7f;// sub opcode
             int immS = ((instr >> 25) << 5) | ((instr >> 7) & 0x1f); // used for store functions
+            int branchOffset =
+        ((instr >> 31) << 12) |
+        (((instr >> 7) & 0x1) << 11) |
+        (((instr >> 25) & 0x3f) << 5) |
+        (((instr >> 8) & 0xf) << 1);
 
             switch (opcode) {
 
@@ -206,6 +211,9 @@ public class IsaSim {
                 case 0x17: // AIUPC
                     reg[rd] = pc + (instr & 0xfffff000);
                     break;
+
+                
+                
 
                 default:
                     System.out.println("Opcode " + opcode + " not yet implemented");
