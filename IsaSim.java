@@ -211,6 +211,7 @@ public class IsaSim {
                 case 0x17: // AIUPC
                     reg[rd] = pc + (instr & 0xfffff000);
                     break;
+                    
 
                 
                 
