@@ -32,15 +32,20 @@ public class IsaSim {
             0x4021d193, // srai x3 x3 2
             0x123451b7, // lui x3 0x12345
             0x00001197, // auipc x3 1 
+            0x00a00893, // addi x17, x0, 10 
+            0x00000073, // ecall
+            0x00200093, // adding indtruction after to check whether it terminates
     };
 
     public static void main(String[] args) {
 
         System.out.println("Hello RISC-V World!");
-
+ boolean programRunning = true;
         pc = 0;
 
-        for (; ; ) {
+        for (;programRunning ; ) {
+            
+            //reg[2]=sp//
 
             //progr is an array containg the instructions//
             //pc >>2 is the same as pc/4, knows which instruction to use based on pc count in the array//
@@ -56,8 +61,19 @@ public class IsaSim {
             int immS = ((instr >> 25) << 5) | ((instr >> 7) & 0x1f); // used for store functions
             int immJ = ((instr >> 31) << 20) | (((instr >> 12) & 0xff) << 12) | (((instr >> 20) & 0x1) << 11)
                     | (((instr >> 21) & 0x3ff) << 1); // used for jump function
+            int branchOffset =
+        ((instr >> 31) << 12) |
+        (((instr >> 7) & 0x1) << 11) |
+        (((instr >> 25) & 0x3F) << 5) |
+        (((instr >> 8) & 0xF) << 1);
+
 
             switch (opcode) {
+                case 0x73://ecall aka terminate
+                if(reg[17]==10){
+                       programRunning = false;
+
+                    }  break;
 
                 case 0x13: // immediate operations
 
@@ -67,7 +83,7 @@ public class IsaSim {
 
                     } else if (funct3 == 0x4) {
                         // XORI
-                        reg[rd] = reg[rs1] & imm;
+                        reg[rd] = reg[rs1] ^ imm;
 
                     } else if (funct3 == 0x7) {
                         // ANDI
@@ -75,7 +91,7 @@ public class IsaSim {
 
                     } else if (funct3 == 0x6) {
                         // ORI
-                        reg[rd] = reg[rs1] | reg[rs2];
+                        reg[rd] = reg[rs1] | reg[imm];
 
                     } else if (funct3 == 0x1) {
                         // SLLI
@@ -212,6 +228,18 @@ public class IsaSim {
                 case 0x17: // AIUPC
                     reg[rd] = pc + (instr & 0xfffff000);
                     break;
+                case 0x63:
+                  if (funct3 == 0x7) { // BGEU
+                   if (Integer.compareUnsigned(reg[rs1], reg[rs2]) >= 0) {
+                    pc += branchOffset - 4;
+        }
+                  }else  if (funct3 == 0x6) { // BLTU
+                   if (Integer.compareUnsigned(reg[rs1], reg[rs2]) < 0) {
+                     pc += branchOffset - 4;
+        }
+    }
+    
+    break;    
                     
 
                 
@@ -230,7 +258,8 @@ public class IsaSim {
                 default:
                     System.out.println("Opcode " + opcode + " not yet implemented");
                     break;
-            }
+            }}
+            if(programRunning){
 
             pc += 4; // One instruction is four bytes
 
@@ -238,7 +267,7 @@ public class IsaSim {
 
             for (int i = 0; i < reg.length; ++i) {
                 System.out.print(reg[i] + " ");
-            }
+            }}
 
             if ((pc >> 2) >= progr.length) {
                 break;
