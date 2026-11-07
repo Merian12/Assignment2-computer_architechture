@@ -5,12 +5,45 @@
  *
  * @author Martin Schoeberl (martin@jopdesign.com)
  */
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
 public class IsaSim {
 
     static int pc;
     static int reg[] = new int[32];
     static byte[] memory = new byte[1 << 20]; // 1 MB of memory
+    static int programSize;
 
+    static void load(String path) throws IOException {
+        byte[] program = Files.readAllBytes(Path.of(path));
+        if (program.length > memory.length) {
+            throw new IllegalArgumentException("Program too large for memory");
+        }
+        System.arraycopy(program, 0, memory, 0, program.length);
+        programSize = program.length;
+    }
+
+    static int readWord(int addr){
+        return (memory[addr] & 0xff)
+                | ((memory[addr + 1] & 0xff) << 8)
+                | ((memory[addr + 2] & 0xff) << 16)
+                | (memory[addr + 3] << 24);
+    }
+
+    static void writeOutput(String path) throws IOException {
+    ByteBuffer buf = ByteBuffer.allocate(32 * 4).order(ByteOrder.LITTLE_ENDIAN);
+    for (int i = 0; i < 32; i++) {
+        buf.putInt(reg[i]);
+    }
+    Files.write(Path.of(path), buf.array());
+}
     // Here the first program hard coded as an array
     static int progr[] = {
             // As minimal RISC-V assembler example
@@ -39,6 +72,30 @@ public class IsaSim {
 
     public static void main(String[] args) {
 
+        PrintStream console = System.out;
+        
+        if(args.length < 1) {
+            throw new IllegalArgumentException("no program file path");
+        }
+
+        //print to text file
+           try {
+            System.setOut(new PrintStream(new FileOutputStream(args[0] +".txt")));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            load(args[0]);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        // this part is to print every instruction when debugging
+       // System.out.println("Loaded " + programSize + " bytes (" + programSize / 4 + " instructions)");
+       // for (int pc = 0; pc < programSize; pc += 4)
+        //    System.out.printf("%04x: %08x%n", pc, readWord(pc));
+        // }  
+
         System.out.println("Hello RISC-V World!");
  boolean programRunning = true;
         pc = 0;
@@ -50,6 +107,7 @@ public class IsaSim {
             //progr is an array containg the instructions//
             //pc >>2 is the same as pc/4, knows which instruction to use based on pc count in the array//
 
+            //change progr to program to use file reading instead
             int instr = progr[pc >> 2];
             int opcode = instr & 0x7f;//extracts the opcode //
             int rd = (instr >> 7) & 0x01f;//destination register//
@@ -162,7 +220,7 @@ public class IsaSim {
 
                 case 0x03: { //load operations
 
-                    int load_address = imm + rs1;
+                    int load_address = reg[rs1] + imm;
 
                     switch (funct3) {
                         case 0: //lb
@@ -251,8 +309,9 @@ public class IsaSim {
                     break;
 
                 case 0x67: // jalr
+                    int temp = (reg[rs1] + imm) & ~1;
                     reg[rd] = pc + 4;
-                    pc = ((reg[rs1] + imm) & ~1) - 4; 
+                    pc = temp - 4;
                     break;
                     
                 default:
@@ -263,7 +322,8 @@ public class IsaSim {
 
             pc += 4; // One instruction is four bytes
 
-            System.out.print("PC " + pc + " ");
+           // System.out.print("PC " + pc + " "); //for debugging purposes
+
 
             for (int i = 0; i < reg.length; ++i) {
                 System.out.print(reg[i] + " ");
@@ -276,6 +336,14 @@ public class IsaSim {
             System.out.println();
         }
 
+        try {
+            writeOutput(args[0] + ".out");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        System.out.close();
+        System.setOut(console);
         System.out.println();
         System.out.println("Program exit");
     }
