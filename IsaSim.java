@@ -52,7 +52,7 @@ public class IsaSim {
 
             int instr = progr[pc >> 2];
             int opcode = instr & 0x7f;//extracts the opcode //
-            int rd = (instr >> 7) & 0x01f;//destination register//
+            int rd = (instr >> 7) & 0x01f;//destination register//shift bits to the right by 7 positions use bit mask 31 to extract the rd
             int funct3 = (instr >> 12) & 0x7;//sub opcode
             int rs1 = (instr >> 15) & 0x01f;//source register//
             int rs2 = (instr >> 20) & 0x1f;//other source register//
