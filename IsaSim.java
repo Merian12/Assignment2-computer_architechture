@@ -1,9 +1,5 @@
 /**
- * RISC-V Instruction Set Simulator
- * <p>
- * A tiny first step to get the simulator started.
- *
- * @author Martin Schoeberl (martin@jopdesign.com)
+ * Authors Merian, Brooke, Nicoleta
  */
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -13,6 +9,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.io.BufferedOutputStream;
 
 public class IsaSim {
 
@@ -80,7 +77,7 @@ public class IsaSim {
 
         //print to text file
            try {
-            System.setOut(new PrintStream(new FileOutputStream(args[0] +".txt")));
+               System.setOut(new PrintStream(new BufferedOutputStream(new FileOutputStream(args[0] +".txt"))));
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
@@ -108,7 +105,8 @@ public class IsaSim {
             //pc >>2 is the same as pc/4, knows which instruction to use based on pc count in the array//
 
             //change progr to program to use file reading instead
-            int instr = progr[pc >> 2];
+            int instr = readWord(pc);            // read instructions from the loaded .bin file
+            // int instr = progr[pc >> 2];      // read hardcoded instructions from progr array
             int opcode = instr & 0x7f;//extracts the opcode //
             int rd = (instr >> 7) & 0x01f;//destination register//
             int funct3 = (instr >> 12) & 0x7;//sub opcode
@@ -119,10 +117,7 @@ public class IsaSim {
             int immS = ((instr >> 25) << 5) | ((instr >> 7) & 0x1f); // used for store functions
             int immJ = ((instr >> 31) << 20) | (((instr >> 12) & 0xff) << 12) | (((instr >> 20) & 0x1) << 11)
                     | (((instr >> 21) & 0x3ff) << 1); // used for jump function
-            int branchOffset =
-        ((instr >> 31) << 12) |
-        (((instr >> 7) & 0x1) << 11) |
-        (((instr >> 25) & 0x3F) << 5) |
+            int branchOffset = ((instr >> 31) << 12) | (((instr >> 7) & 0x1) << 11) | (((instr >> 25) & 0x3F) << 5) |
         (((instr >> 8) & 0xF) << 1);
 
 
@@ -149,7 +144,7 @@ public class IsaSim {
 
                     } else if (funct3 == 0x6) {
                         // ORI
-                        reg[rd] = reg[rs1] | reg[imm];
+                        reg[rd] = reg[rs1] | imm;
 
                     } else if (funct3 == 0x1) {
                         // SLLI
@@ -286,22 +281,35 @@ public class IsaSim {
                 case 0x17: // AIUPC
                     reg[rd] = pc + (instr & 0xfffff000);
                     break;
-                case 0x63:
-                  if (funct3 == 0x7) { // BGEU
-                   if (Integer.compareUnsigned(reg[rs1], reg[rs2]) >= 0) {
-                    pc += branchOffset - 4;
-        }
-                  }else  if (funct3 == 0x6) { // BLTU
-                   if (Integer.compareUnsigned(reg[rs1], reg[rs2]) < 0) {
-                     pc += branchOffset - 4;
-        }
-    }
-    
-    break;    
-                    
 
-                
-                
+                case 0x63: // branches
+                    if (funct3 == 0x0) { // BEQ
+                        if (reg[rs1] == reg[rs2]) {
+                            pc += branchOffset - 4;
+                        }
+                    } else if (funct3 == 0x1) { // BNE
+                        if (reg[rs1] != reg[rs2]) {
+                            pc += branchOffset - 4;
+                        }
+                    } else if (funct3 == 0x4) { // BLT (signed)
+                        if (reg[rs1] < reg[rs2]) {
+                            pc += branchOffset - 4;
+                        }
+                    } else if (funct3 == 0x5) { // BGE (signed)
+                        if (reg[rs1] >= reg[rs2]) {
+                            pc += branchOffset - 4;
+                        }
+                    } else if (funct3 == 0x6) { // BLTU (unsigned)
+                        if (Integer.compareUnsigned(reg[rs1], reg[rs2]) < 0) {
+                            pc += branchOffset - 4;
+                        }
+                    } else if (funct3 == 0x7) { // BGEU (unsigned)
+                        if (Integer.compareUnsigned(reg[rs1], reg[rs2]) >= 0) {
+                            pc += branchOffset - 4;
+                        }
+                    }
+                    break;
+
 
                 case 0x6f: // jal
                     reg[rd] = pc + 4;
@@ -317,34 +325,39 @@ public class IsaSim {
                 default:
                     System.out.println("Opcode " + opcode + " not yet implemented");
                     break;
-            }}
+            }
+            reg[0] = 0;
             if(programRunning){
 
             pc += 4; // One instruction is four bytes
-
-           // System.out.print("PC " + pc + " "); //for debugging purposes
 
 
             for (int i = 0; i < reg.length; ++i) {
                 System.out.print(reg[i] + " ");
             }}
 
-            if ((pc >> 2) >= progr.length) {
+            if (pc >= programSize) {                 // stop after the last instruction of the .bin file
+//            if ((pc >> 2) >= progr.length) {      // for running hardcoded instructions
                 break;
             }
 
             System.out.println();
         }
 
+        //write to output file
         try {
             writeOutput(args[0] + ".out");
         } catch (IOException e) {
             e.printStackTrace();
         }
 
+        // print resulting registers
         System.out.close();
         System.setOut(console);
-        System.out.println();
         System.out.println("Program exit");
+        System.out.println("Final register contents:");
+        for (int i = 0; i < reg.length; i++) {
+            System.out.printf("x%-2d = %11d  (0x%08x)%n", i, reg[i], reg[i]);
+        }
     }
 }
